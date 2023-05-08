@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 )
 
 func multiDownload(urlx, filename string) error {
@@ -13,6 +14,7 @@ func multiDownload(urlx, filename string) error {
 		wg           sync.WaitGroup
 		downloadSize int64
 		downloaded   int64
+		startTime    time.Time
 	)
 
 	// Get file size
@@ -30,7 +32,7 @@ func multiDownload(urlx, filename string) error {
 	defer file.Close()
 
 	// Set up concurrent downloads
-	numWorkers := 5
+	numWorkers := 5000
 	rangeSize := downloadSize / int64(numWorkers)
 	for i := 0; i < numWorkers; i++ {
 		start := rangeSize * int64(i)
@@ -76,11 +78,14 @@ func multiDownload(urlx, filename string) error {
 				}
 				downloaded += int64(n)
 
-				// Print progress
-				fmt.Printf("\rDownloading... %.2f%%\n", float64(downloaded)/float64(downloadSize)*100)
+				// Print progress and speed
+				elapsed := time.Since(startTime).Seconds()
+				speed := float64(downloaded) / elapsed / 1024 / 1024
+				fmt.Printf("\rDownloading... %.2f%% (%.2f MB/s)", float64(downloaded)/float64(downloadSize)*100, speed)
 			}
 		}(start, end)
 	}
+	startTime = time.Now()
 
 	wg.Wait()
 	fmt.Println("\nDownload complete!")
